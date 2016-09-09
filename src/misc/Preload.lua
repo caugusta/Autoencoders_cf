@@ -1,6 +1,11 @@
+-- Load data and prepare it for CUDA
+-- params is the configuration
 function LoadData(file, params)
 
    local use_gpu = params.gpu > 0
+   -- type is U or V autoencoder 
+   -- U is the autoencoder learning v
+   -- V is the autoencoder learning the user stuff
    local type    = params.type
    
    if type ~= "U" and type ~= "V" then
@@ -37,7 +42,6 @@ function LoadData(file, params)
       else
          torch.manualSeed(torch.seed())
       end
-
 
       print("Loading data to GPU...")
       for k, _ in pairs(train) do      --dirty code, but it does the job

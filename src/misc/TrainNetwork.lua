@@ -2,10 +2,11 @@ function TrainNetwork(train, test, info, config)
 
    -- retrieve layer size
    local metaDim = 0
-   if config.use_meta then 
+   if config.use_meta then -- Metadate, We had it set to false
       metaDim = info.metaDim or 0
    end
 
+   -- Here we gather the configuration pertaining to the dataset we're interested in training on
    local bottleneck = {}
    bottleneck[0] = info.dimension
    local i = 1
@@ -50,7 +51,7 @@ function TrainNetwork(train, test, info, config)
                encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1] + metaDim, bottleneck[i], false))
             end     
                       
-         else --dense input
+         else --dense input, don't pad it
          
             if appenderIn then 
                encoders[i]:add(cfn.AppenderOut(appenderIn)) 
@@ -80,7 +81,8 @@ function TrainNetwork(train, test, info, config)
       end
 
    end
-   
+   -- rmse = root mean squared error
+   -- mae = mean absolute error
    local error = {rmse = {}, mae = {}}
    
 
@@ -91,6 +93,8 @@ function TrainNetwork(train, test, info, config)
       if string.starts(key, "layer") then
 
          noLayer = noLayer + 1
+         -- noLayer gets incremented by one for each layer in config file
+         -- we iterate down from the number of layer at each step 'till 0
          for k = noLayer, 1, -1 do 
 
             --Retrieve configuration      
