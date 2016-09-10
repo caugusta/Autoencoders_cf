@@ -255,9 +255,9 @@ end
 
 function AutoEncoderTrainer:Execute(sgdOpt)
 
-   local noEpoch = sgdOpt.noEpoch
+   local noEpoch = sgdOpt.noEpoch --wcc: 50
 
-   for t = 1, noEpoch do
+   for t = 1, noEpoch do 
 
       xlua.progress(t, noEpoch)
       print("")

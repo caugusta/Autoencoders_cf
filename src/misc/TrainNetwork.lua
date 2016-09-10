@@ -92,75 +92,75 @@ function TrainNetwork(train, test, info, config)
 
       if string.starts(key, "layer") then
 
-         noLayer = noLayer + 1
+         noLayer = noLayer + 1 -- wcc (with current config): 1 
          -- noLayer gets incremented by one for each layer in config file
-         -- we iterate down from the number of layer at each step 'till 0
-         for k = noLayer, 1, -1 do 
+         -- we iterate by -1 from the number of layer at each step 'till 1
+         for k = noLayer, 1, -1 do --wcc no iteration
 
             --Retrieve configuration      
-            local step    = noLayer-k+1
-            local sgdConf = confLayer[step]
-            sgdConf.name = key .. "-" .. step 
+            local step    = noLayer-k+1 -- current step in loop wcc: 1
+            local sgdConf = confLayer[step] -- the configuration of the layer wcc: layer1 in conf file
+            sgdConf.name = key .. "-" .. step -- layer1-1
             
 
             --if no epoch, skip!
-            if sgdConf.noEpoch > 0 then  
+            if sgdConf.noEpoch > 0 then --wcc = 50 
 
-            -- Build intermediate networks
-            local network = nn.Sequential()
-            for i = k      , noLayer,  1 do network:add(encoders[i]) end 
-            for i = noLayer, k      , -1 do network:add(decoders[i]) end
+            	-- Build intermediate networks
+            	local network = nn.Sequential()
+            	for i = k      , noLayer,  1 do network:add(encoders[i]) end 
+            	for i = noLayer, k      , -1 do network:add(decoders[i]) end
 
-            --Flatten network --> speedup + easier to debug
-            network = cfn.FlatNetwork(network)
+            	--Flatten network --> speedup + easier to debug
+            	network = cfn.FlatNetwork(network)
 
-            if config.use_gpu then
-               network:cuda()
-               sgdConf.criterion:cuda()
-            end
-
-
-            -- inform the trainer that data are sparse
-            if k == 1 then network.isSparse = true end
+            	if config.use_gpu then
+            	   network:cuda()
+            	   sgdConf.criterion:cuda()
+            	end
 
 
-            -- provide input information to SDAE (ugly...)
-            if torch.type(sgdConf.criterion) == "cfn.SDAECriterionGPU" then
-               sgdConf.criterion.inputDim = bottleneck[k-1]
-            end
-            
-            
-            -- provide side information
-            sgdConf.appenderIn = appenderIn
+            	-- inform the trainer that data are sparse
+            	if k == 1 then network.isSparse = true end
 
 
-            --compute data for intermediate steps (can be improved)
-            local newtrain = train
-            local newtest  = test
-            for i = 1, k-1 do
-            
-               local batchifier = cfn.Batchifier(encoders[i], bottleneck[i], appenderIn, info)
-                
-               newtrain = batchifier:forward(newtrain, 20)
-               newtest  = batchifier:forward(newtest, 20)
-            end
+            	-- provide input information to SDAE (ugly...) and far-fetched
+            	if torch.type(sgdConf.criterion) == "cfn.SDAECriterionGPU" then
+            	   sgdConf.criterion.inputDim = bottleneck[k-1] -- this is the input coming in from the previous layer, it is the dimension
+            	end
+            	
+            	
+            	-- provide side information
+            	sgdConf.appenderIn = appenderIn
 
-            --Train network
-            print("Start training : " .. sgdConf.name)
-            print(network)
 
-            
-            local trainer = AutoEncoderTrainer.new(network, sgdConf, newtrain, newtest, info)
-            trainer:Execute(sgdConf)
+            	--compute data for intermediate steps (can be improved)
+            	local newtrain = train
+            	local newtest  = test
+            	for i = 1, k-1 do
+            	
+            	   local batchifier = cfn.Batchifier(encoders[i], bottleneck[i], appenderIn, info)
+            	    
+            	   newtrain = batchifier:forward(newtrain, 20)
+            	   newtest  = batchifier:forward(newtest, 20)
+            	end
 
-            -- store loss
-            if k == 1 then 
-                error.rmse[#error.rmse+1] = trainer.rmse
-                error.mae [#error.mae +1] = trainer.mae
-            end
-            
-            finalNetwork = network
-            end
+            	--Train network
+            	print("Start training : " .. sgdConf.name)
+            	print(network)
+
+            	
+            	local trainer = AutoEncoderTrainer.new(network, sgdConf, newtrain, newtest, info)
+            	trainer:Execute(sgdConf)
+
+            	-- store loss
+            	if k == 1 then 
+            	    error.rmse[#error.rmse+1] = trainer.rmse
+            	    error.mae [#error.mae +1] = trainer.mae
+            	end
+            	
+            	finalNetwork = network
+            	end
          end
       end
 
